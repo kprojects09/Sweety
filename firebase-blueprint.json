@@ -1,0 +1,85 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile and Configuration State",
+      "description": "Stores user configuration, device settings, logs, and Sweety conversational memory logs.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "User email address"
+        },
+        "theme": {
+          "type": "string",
+          "description": "Active UI color theme identifier"
+        },
+        "settings": {
+          "type": "object",
+          "description": "Simulated hardware switches (Wi-Fi, Bluetooth, etc.)"
+        },
+        "systemLogs": {
+          "type": "array",
+          "description": "Sub-array of recent system event traces"
+        },
+        "messageLogs": {
+          "type": "array",
+          "description": "Simulated message/SMS inbox history"
+        },
+        "customAvatarUrl": {
+          "type": "string",
+          "description": "User uploaded custom base64 avatar URL or null"
+        },
+        "chatHistory": {
+          "type": "array",
+          "description": "Sequence of completed conversational exchanges (memories) with Sweety"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Document creation timestamp"
+        },
+        "lastSynced": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last cloud synchronization timestamp"
+        }
+      },
+      "required": ["email"]
+    },
+    "Login": {
+      "title": "User Login Record",
+      "description": "Logs daily user login attempts for developer analytics tracking.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Unique identifier of the user"
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the logging user"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Exact moment of login"
+        },
+        "dateStr": {
+          "type": "string",
+          "description": "Date representation in YYYY-MM-DD format"
+        }
+      },
+      "required": ["uid", "email", "dateStr"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Access-controlled user documents holding system state, settings, logs, and memories."
+    },
+    "/logins/{loginId}": {
+      "schema": "Login",
+      "description": "Daily user logins recorded to compute metrics and counts of unique active users per day."
+    }
+  }
+}
