@@ -763,15 +763,47 @@ function DeveloperLockscreen({
 function DeveloperStatsModal({
   isOpen,
   onClose,
-  theme
+  theme,
+  addSystemLog
 }: {
   isOpen: boolean;
   onClose: () => void;
   theme: any;
+  addSystemLog?: (log: string) => void;
 }) {
   const [logins, setLogins] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Custom API key configuration states
+  const [showKeyConfig, setShowKeyConfig] = useState(false);
+  const [inputKey, setInputKey] = useState(() => localStorage.getItem('custom_gemini_api_key') || '');
+  const [showPassword, setShowPassword] = useState(false);
+  const [customKeyActive, setCustomKeyActive] = useState(() => !!localStorage.getItem('custom_gemini_api_key'));
+
+  const handleSaveKey = () => {
+    const trimmed = inputKey.trim();
+    if (trimmed) {
+      localStorage.setItem('custom_gemini_api_key', trimmed);
+      setCustomKeyActive(true);
+      setShowKeyConfig(false);
+      if (addSystemLog) {
+        addSystemLog(`[SYSTEM] Custom Gemini API key saved successfully.`);
+      }
+    } else {
+      handleClearKey();
+    }
+  };
+
+  const handleClearKey = () => {
+    localStorage.removeItem('custom_gemini_api_key');
+    setInputKey('');
+    setCustomKeyActive(false);
+    setShowKeyConfig(false);
+    if (addSystemLog) {
+      addSystemLog(`[SYSTEM] Custom Gemini API key cleared. Reverted to server fallback.`);
+    }
+  };
 
   const fetchLogins = async () => {
     setLoading(true);
@@ -875,6 +907,92 @@ function DeveloperStatsModal({
                 <span className="text-2xl font-bold text-amber-400 mt-1">{logins.length}</span>
                 <span className="text-[8px] text-amber-500/60 uppercase mt-0.5 font-sans">All sessions in history</span>
               </div>
+            </div>
+
+            {/* Custom API Key Configuration */}
+            <div className="border border-amber-500/20 bg-amber-500/5 p-3 space-y-2.5">
+              <div className="flex justify-between items-center border-b border-amber-500/10 pb-1">
+                <span className="text-[10px] uppercase text-amber-400 font-bold flex items-center gap-1.5">
+                  🔑 Custom Gemini API Key Configuration
+                </span>
+                <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-sm uppercase ${
+                  customKeyActive 
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                    : 'bg-amber-500/10 text-amber-500/80 border border-amber-500/20'
+                }`}>
+                  {customKeyActive ? 'Custom Active' : 'Server Default'}
+                </span>
+              </div>
+
+              {!showKeyConfig ? (
+                <div className="flex flex-col gap-1.5">
+                  {customKeyActive && (
+                    <div className="text-[9px] text-gray-400 break-all font-mono">
+                      Current Key: <span className="text-emerald-400">••••••••••••••••{localStorage.getItem('custom_gemini_api_key')?.slice(-6) || ''}</span>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowKeyConfig(true)}
+                    className="w-full text-center border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 text-[9px] uppercase font-mono py-1.5 font-bold transition-all cursor-pointer"
+                  >
+                    {customKeyActive ? '[ Edit Custom API Key ]' : '[ Configure Custom API Key ]'}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <label className="text-[8px] uppercase tracking-wider text-gray-400 block font-bold">
+                      Enter Gemini API Key (Stored in browser local storage)
+                    </label>
+                    <div className="relative flex gap-1">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={inputKey}
+                        onChange={(e) => setInputKey(e.target.value)}
+                        placeholder="AIzaSy..."
+                        className="flex-1 bg-black text-[#00FF41] font-mono text-[10px] p-1.5 border border-amber-500/30 focus:border-amber-400 outline-none placeholder-gray-700"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="px-2 border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 text-[9px] font-bold uppercase transition-all"
+                      >
+                        {showPassword ? "Hide" : "Show"}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowKeyConfig(false);
+                        setInputKey(localStorage.getItem('custom_gemini_api_key') || '');
+                      }}
+                      className="px-2 py-1 border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 text-[9px] uppercase font-bold transition-all"
+                    >
+                      Cancel
+                    </button>
+                    {customKeyActive && (
+                      <button
+                        type="button"
+                        onClick={handleClearKey}
+                        className="px-2 py-1 border border-red-500/30 text-red-400 hover:bg-red-500/10 text-[9px] uppercase font-bold transition-all"
+                      >
+                        Clear Key
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleSaveKey}
+                      className="px-3 py-1 bg-amber-400 text-black hover:bg-amber-500 text-[9px] uppercase font-bold transition-all"
+                    >
+                      Save Key
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* List of active users today */}
@@ -1613,7 +1731,9 @@ ${formattedHistory}
       });
       streamRef.current = micPermission;
 
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const customKey = localStorage.getItem('custom_gemini_api_key');
+      const apiKey = (customKey && customKey.trim()) || process.env.GEMINI_API_KEY;
+      const ai = new GoogleGenAI({ apiKey });
       
       const session = await ai.live.connect({
         model: "gemini-3.1-flash-live-preview",
@@ -2292,6 +2412,7 @@ ${formattedHistory}
             isOpen={showDeveloperPanel}
             onClose={() => setShowDeveloperPanel(false)}
             theme={theme}
+            addSystemLog={addSystemLog}
           />
         )}
       </AnimatePresence>
