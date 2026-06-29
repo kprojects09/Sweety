@@ -1,4 +1,4 @@
-herename: Build SWEETY APK with Mic
+name: Build SWEETY APK with Mic
 on: workflow_dispatch
 
 jobs:
